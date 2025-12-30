@@ -54,9 +54,9 @@ app.get('/health', (req, res) => {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         services: {
-            aiModels: textModerationService.isInitialized && 
-                     imageModerationService.isInitialized && 
-                     multimodalModerationService.isInitialized,
+            aiModels: textModerationService.isInitialized &&
+                imageModerationService.isInitialized &&
+                multimodalModerationService.isInitialized,
             database: database.isConnected,
             cache: redisCache.isConnected
         }
@@ -95,16 +95,16 @@ app.get('/api/stats/cache', (req, res) => {
 app.post('/api/moderate/text', cacheMiddleware({ ttl: 3600 }), async (req, res) => {
     try {
         const { text } = req.body;
-        
+
         if (!text || text.trim().length === 0) {
-            return res.status(400).json({ 
-                error: 'Text is required and cannot be empty' 
+            return res.status(400).json({
+                error: 'Text is required and cannot be empty'
             });
         }
 
         if (text.length > 5000) {
-            return res.status(400).json({ 
-                error: 'Text exceeds maximum length of 5000 characters' 
+            return res.status(400).json({
+                error: 'Text exceeds maximum length of 5000 characters'
             });
         }
 
@@ -135,7 +135,7 @@ app.post('/api/moderate/text', cacheMiddleware({ ttl: 3600 }), async (req, res) 
         });
     } catch (error) {
         console.error('Error in text moderation:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -146,8 +146,8 @@ app.post('/api/moderate/text', cacheMiddleware({ ttl: 3600 }), async (req, res) 
 app.post('/api/moderate/image', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ 
-                error: 'No image file provided. Use field name "image"' 
+            return res.status(400).json({
+                error: 'No image file provided. Use field name "image"'
             });
         }
 
@@ -186,12 +186,12 @@ app.post('/api/moderate/image', upload.single('image'), async (req, res) => {
         });
     } catch (error) {
         console.error('Error in image moderation:', error);
-        
+
         if (error.message.includes('Invalid file type')) {
             return res.status(400).json({ error: error.message });
         }
-        
-        res.status(500).json({ 
+
+        res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -202,16 +202,16 @@ app.post('/api/moderate/image', upload.single('image'), async (req, res) => {
 app.post('/api/moderate/multimodal', upload.single('image'), async (req, res) => {
     try {
         const { text } = req.body;
-        
+
         if (!text || text.trim().length === 0) {
-            return res.status(400).json({ 
-                error: 'Text is required and cannot be empty' 
+            return res.status(400).json({
+                error: 'Text is required and cannot be empty'
             });
         }
 
         if (!req.file) {
-            return res.status(400).json({ 
-                error: 'Image file is required. Use field name "image"' 
+            return res.status(400).json({
+                error: 'Image file is required. Use field name "image"'
             });
         }
 
@@ -258,7 +258,7 @@ app.post('/api/moderate/multimodal', upload.single('image'), async (req, res) =>
         });
     } catch (error) {
         console.error('Error in multimodal moderation:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -276,23 +276,22 @@ app.use((req, res) => {
 async function startServer() {
     try {
         console.log('Initializing Content Moderation System...\n');
-        
+
         console.log('Step 1/3: Connecting to database...');
         await database.connect();
         console.log('');
-        
+
         console.log('Step 2/3: Connecting to cache...');
         await redisCache.connect();
         console.log('');
-        
-        console.log('Step 3/3: Loading AI models...');
-        await Promise.all([
-            textModerationService.initialize(),
-            imageModerationService.initialize(),
-            multimodalModerationService.initialize()
-        ]);
+
+        console.log('Step 3/3: Loading AI models (this may take a few minutes on first run)...');
+        // Load models sequentially to avoid race conditions during first-time download
+        await textModerationService.initialize();
+        await imageModerationService.initialize();
+        await multimodalModerationService.initialize();
         console.log('');
-        
+
         app.listen(PORT, () => {
             console.log('System fully initialized and ready!\n');
             console.log(`Server running on http://localhost:${PORT}`);
@@ -301,7 +300,7 @@ async function startServer() {
             console.log(`Image moderation: POST http://localhost:${PORT}/api/moderate/image`);
             console.log(`Multimodal: POST http://localhost:${PORT}/api/moderate/multimodal\n`);
         });
-        
+
     } catch (error) {
         console.error('Failed to start server:', error.message);
         process.exit(1);

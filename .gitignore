@@ -10,7 +10,7 @@ client/node_modules/
 
 # AI Model cache (downloaded automatically)
 .cache/
-models/
+.models/
 .huggingface/
 
 # Temporary files
