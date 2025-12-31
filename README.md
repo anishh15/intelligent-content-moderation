@@ -26,16 +26,17 @@ This system provides automated content moderation capabilities for platforms req
 * MongoDB persistence layer with indexed queries
 * In-memory caching for improved response times
 * RESTful API design with comprehensive endpoint coverage
-* Docker-ready containerized architecture
+* Docker containerized architecture
 
 ## Technology Stack
 
 **Backend**
 
-* Node.js with Express.js framework
+* Node.js 20+ with Express.js 5
 * MongoDB with Mongoose ODM
 * node-cache for in-memory caching
 * Hugging Face Transformers.js for AI inference
+* Sharp for image processing
 
 **AI Models**
 
@@ -44,14 +45,15 @@ This system provides automated content moderation capabilities for platforms req
 
 **Frontend**
 
-* React.js for UI components
+* React 19 for UI components
 * Recharts for data visualization
 * Axios for API communication
 
 **Deployment**
 
-* Docker containerization
-* AWS ECS/Fargate deployment ready
+* Docker with multi-stage builds
+* Docker Compose for local development
+* nginx for frontend static serving and API proxy
 
 ## System Requirements
 
@@ -59,27 +61,40 @@ This system provides automated content moderation capabilities for platforms req
 * MongoDB Atlas account or local MongoDB instance
 * Minimum 4GB RAM (8GB recommended for AI model loading)
 * Git for version control
+* Docker (optional, for containerized deployment)
 
 ## Installation
 
-### Backend Setup
+### Option 1: Docker (Recommended)
 
-Clone repository:
+```bash
+# Clone repository
+git clone https://github.com/anishh15/intelligent-content-moderation.git
+cd intelligent-content-moderation
+
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+Services will be available at:
+- Frontend Dashboard: http://localhost:80
+- Backend API: http://localhost:3000
+- MongoDB: localhost:27017
+
+### Option 2: Manual Setup
+
+#### Backend Setup
 
 ```bash
 git clone https://github.com/anishh15/intelligent-content-moderation.git
 cd intelligent-content-moderation
-```
-
-Install backend dependencies:
-
-```bash
 npm install
 ```
 
-### Frontend Setup
-
-Install frontend dependencies:
+#### Frontend Setup
 
 ```bash
 cd client
@@ -87,38 +102,53 @@ npm install
 cd ..
 ```
 
-### Environment Configuration
+#### Environment Configuration
 
 Create a `.env` file in the project root:
 
-```
+```env
 PORT=3000
 NODE_ENV=development
-
 MONGODB_URI=your_mongodb_connection_string
 MONGODB_DB_NAME=cms_db
 ```
 
 Replace `your_mongodb_connection_string` with your MongoDB Atlas or local instance connection string.
 
-### Development Servers
+#### Start Development Servers
 
-Start the backend server (Terminal 1):
-
+Terminal 1 (Backend):
 ```bash
 npm run dev
 ```
 
-Start the frontend development server (Terminal 2):
-
+Terminal 2 (Frontend):
 ```bash
 cd client
 npm start
 ```
 
-Backend API: `http://localhost:3000`
+Backend API: http://localhost:3000
+Frontend Dashboard: http://localhost:3001
 
-Frontend dashboard: `http://localhost:3001` (React automatically selects port 3001 when backend uses 3000)
+## Docker Commands
+
+```bash
+# Build containers
+npm run docker:build
+
+# Start services
+npm run docker:up
+
+# Stop services
+npm run docker:down
+
+# View logs
+npm run docker:logs
+
+# Restart services
+npm run docker:restart
+```
 
 ## API Reference
 
@@ -175,6 +205,19 @@ Content-Type: application/json
 }
 ```
 
+**Bulk Review**
+
+```
+POST /api/admin/review/bulk
+Content-Type: application/json
+
+{
+  "ids": ["id1", "id2"],
+  "decision": "approved",
+  "reviewedBy": "reviewer@example.com"
+}
+```
+
 **Get System Statistics**
 
 ```
@@ -201,12 +244,48 @@ GET /health
 GET /api/stats/cache
 ```
 
+## Project Structure
+
+```
+intelligent-content-moderation/
+├── app.js                 # Main server entry point
+├── package.json           # Backend dependencies
+├── Dockerfile             # Backend container
+├── docker-compose.yml     # Multi-service orchestration
+├── .env                   # Environment variables (not in git)
+├── config/
+│   ├── database.js        # MongoDB connection
+│   └── redis.js           # In-memory cache service
+├── middleware/
+│   ├── uploadMiddleware.js    # Image upload handling
+│   └── cacheMiddleware.js     # Response caching
+├── models/
+│   ├── ModerationResult.js        # Database schema
+│   ├── textModerationService.js   # Text AI service
+│   ├── imageModerationService.js  # Image AI service
+│   └── multimodalModerationService.js  # Cross-modal analysis
+├── routes/
+│   └── adminRoutes.js     # Admin API endpoints
+└── client/
+    ├── Dockerfile         # Frontend container
+    ├── nginx.conf         # Nginx configuration
+    ├── package.json       # Frontend dependencies
+    └── src/
+        ├── App.js
+        ├── components/
+        │   ├── Dashboard.js
+        │   ├── Dashboard.css
+        │   └── Icons.js
+        └── services/
+            └── api.js     # API client
+```
+
 ## Performance Characteristics
 
-* **Initial Request Latency**: 500-1000ms (estimated, depends on hardware)
-* **Cached Request Latency**: 5-20ms (estimated)
-* **Throughput Capacity**: ~100 requests/second for text moderation (hardware dependent)
-* **Typical Cache Hit Rate**: 60-80% (estimated)
+* **Initial Request Latency**: 500-1000ms (depends on hardware)
+* **Cached Request Latency**: 5-20ms
+* **AI Model Loading**: 1-2 minutes on first run
+* **Typical Cache Hit Rate**: 60-80%
 
 ## Architecture
 
@@ -217,27 +296,26 @@ The system follows a three-tier architecture:
 3. **Data Layer**: MongoDB for persistence, node-cache for performance
 
 ```
-React Dashboard -> Express API -> AI Models (Transformers.js)
-                          |-> MongoDB
-                          |-> node-cache
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  React Client   │────▶│  Express API    │────▶│  AI Models      │
+│  (nginx)        │     │                 │     │  (Transformers) │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+            ┌───────────────┐         ┌───────────────┐
+            │   MongoDB     │         │  node-cache   │
+            └───────────────┘         └───────────────┘
 ```
-
-## Use Cases
-
-* Social media platforms requiring real-time content filtering
-* E-commerce sites moderating user-generated product reviews
-* Community forums enforcing content guidelines
-* Dating applications screening profile content
-* User-generated content platforms across verticals
 
 ## Security Considerations
 
 * Helmet.js for HTTP header security
 * CORS protection
 * Input validation and sanitization
-* MongoDB injection prevention (parameterized queries)
+* MongoDB injection prevention
 * Trust proxy configuration for accurate IP detection
-* Rate limiting (implementation-ready)
+* Docker network isolation
 
 ## Development Roadmap
 
@@ -250,37 +328,13 @@ Future enhancements:
 * Webhook system for real-time notifications
 * Custom model fine-tuning
 * Kubernetes orchestration
-
-## Building for Production
-
-### Backend Build
-
-```bash
-npm run build
-```
-
-### Frontend Build
-
-```bash
-cd client
-npm run build
-```
-
-## Docker Deployment
-
-Docker configuration is **pending**.
-
-```bash
-# Docker setup coming soon
-docker-compose up -d
-```
+* Rate limiting implementation
 
 ## Testing
 
-Tests are **not yet implemented**.
-
 ```bash
-# TODO: Add test suite
+# Frontend tests
+cd client
 npm test
 ```
 
@@ -292,7 +346,7 @@ Contributions are welcome. Submit issues for bug reports or feature requests. Pu
 
 Project Maintainer: **Anish Laddha**
 Email: **[anshladdha15@gmail.com](mailto:anshladdha15@gmail.com)**
-Repository: `https://github.com/anishh15/intelligent-content-moderation`
+Repository: https://github.com/anishh15/intelligent-content-moderation
 
 ## Acknowledgments
 

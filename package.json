@@ -4,9 +4,13 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "echo \"No tests yet\" && exit 0"
+    "start": "node app.js",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:restart": "docker compose restart"
   },
   "keywords": [],
   "author": "",

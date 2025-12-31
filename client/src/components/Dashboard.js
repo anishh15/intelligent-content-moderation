@@ -22,6 +22,8 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    // State for confirmation modal
+    const [pendingReview, setPendingReview] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -52,31 +54,48 @@ function Dashboard() {
         }
     };
 
-    const handleReview = async (id, decision, contentPreview) => {
+    // Open confirmation modal instead of window.confirm
+    const handleReview = (e, id, decision, contentPreview) => {
+        e.preventDefault();
+        e.stopPropagation();
+
         const actionMap = {
             'approved': 'approve',
             'rejected': 'block',
             'flagged_for_review': 'escalate'
         };
 
-        const confirmed = window.confirm(
-            `Are you sure you want to ${actionMap[decision]} this content?\n\n"${contentPreview}"`
-        );
+        setPendingReview({
+            id,
+            decision,
+            contentPreview,
+            actionLabel: actionMap[decision]
+        });
+    };
 
-        if (!confirmed) return;
+    // Execute the review after confirmation
+    const confirmReview = async () => {
+        if (!pendingReview) return;
 
         try {
-            await adminAPI.reviewResult(id, {
-                decision,
+            await adminAPI.reviewResult(pendingReview.id, {
+                decision: pendingReview.decision,
                 reviewedBy: ADMIN_EMAIL,
-                reviewNotes: `Manually reviewed as ${decision}`
+                reviewNotes: `Manually reviewed as ${pendingReview.decision}`
             });
 
+            setPendingReview(null);
             loadData();
         } catch (error) {
             console.error('Error reviewing content:', error);
             alert('Failed to submit review. Please try again.');
+            setPendingReview(null);
         }
+    };
+
+    // Cancel the review
+    const cancelReview = () => {
+        setPendingReview(null);
     };
 
     // Custom tooltip for activity chart
@@ -205,7 +224,7 @@ function Dashboard() {
                                         tick={{ fill: '#64748b', fontSize: 12 }}
                                     />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9' }} />
-                                    
+
                                     {/* STACK ORDER (Bottom to Top):
                                        1. Rejected (Bottom)
                                        2. Flagged (Middle)
@@ -332,7 +351,8 @@ function Dashboard() {
                                                         <div className="pending-label">Awaiting Review</div>
                                                         <div className="action-bar">
                                                             <button
-                                                                onClick={() => handleReview(result._id, 'approved', contentPreview)}
+                                                                type="button"
+                                                                onClick={(e) => handleReview(e, result._id, 'approved', contentPreview)}
                                                                 className="btn-icon approve"
                                                                 aria-label="Approve content"
                                                             >
@@ -340,7 +360,8 @@ function Dashboard() {
                                                                 <span>Safe</span>
                                                             </button>
                                                             <button
-                                                                onClick={() => handleReview(result._id, 'flagged_for_review', contentPreview)}
+                                                                type="button"
+                                                                onClick={(e) => handleReview(e, result._id, 'flagged_for_review', contentPreview)}
                                                                 className="btn-icon flag"
                                                                 aria-label="Escalate for review"
                                                             >
@@ -348,7 +369,8 @@ function Dashboard() {
                                                                 <span>Escalate</span>
                                                             </button>
                                                             <button
-                                                                onClick={() => handleReview(result._id, 'rejected', contentPreview)}
+                                                                type="button"
+                                                                onClick={(e) => handleReview(e, result._id, 'rejected', contentPreview)}
                                                                 className="btn-icon reject"
                                                                 aria-label="Reject content"
                                                             >
@@ -372,21 +394,24 @@ function Dashboard() {
                                                             <span className="re-review-label">Change Decision:</span>
                                                             <div className="action-bar-small">
                                                                 <button
-                                                                    onClick={() => handleReview(result._id, 'approved', contentPreview)}
+                                                                    type="button"
+                                                                    onClick={(e) => handleReview(e, result._id, 'approved', contentPreview)}
                                                                     className="btn-icon-small approve"
                                                                     title="Approve"
                                                                 >
                                                                     <Check />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleReview(result._id, 'flagged_for_review', contentPreview)}
+                                                                    type="button"
+                                                                    onClick={(e) => handleReview(e, result._id, 'flagged_for_review', contentPreview)}
                                                                     className="btn-icon-small flag"
                                                                     title="Escalate"
                                                                 >
                                                                     <Alert />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleReview(result._id, 'rejected', contentPreview)}
+                                                                    type="button"
+                                                                    onClick={(e) => handleReview(e, result._id, 'rejected', contentPreview)}
                                                                     className="btn-icon-small reject"
                                                                     title="Block"
                                                                 >
@@ -405,6 +430,27 @@ function Dashboard() {
                     </section>
                 </div>
             </main>
+
+            {/* Confirmation Modal */}
+            {pendingReview && (
+                <div className="modal-overlay" onClick={cancelReview}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3>Confirm Action</h3>
+                        <p>Are you sure you want to <strong>{pendingReview.actionLabel}</strong> this content?</p>
+                        <div className="modal-preview">
+                            "{pendingReview.contentPreview}"
+                        </div>
+                        <div className="modal-actions">
+                            <button type="button" className="modal-btn cancel" onClick={cancelReview}>
+                                Cancel
+                            </button>
+                            <button type="button" className="modal-btn confirm" onClick={confirmReview}>
+                                Yes, {pendingReview.actionLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

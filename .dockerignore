@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+client/node_modules
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.test
+
+# AI model cache (downloaded by transformers.js)
+.cache
+.huggingface
+
+# Temporary files
+temp
+*.tmp
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+client/build
+client/dist
+dist
+build
+
+# Testing
+coverage
+.nyc_output
+
+# Documentation
+README.md
+docs
+
+# CI/CD
+.github
+.gitlab-ci.yml
