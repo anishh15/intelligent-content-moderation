@@ -11,10 +11,13 @@ services:
             - PORT=3000
             - MONGODB_URI=mongodb://mongodb:27017/cms_db
             - MONGODB_DB_NAME=cms_db
+            - REDIS_URL=redis://redis:6379
         volumes:
             - ./temp:/app/temp
         depends_on:
             mongodb:
+                condition: service_healthy
+            redis:
                 condition: service_healthy
         restart: unless-stopped
         networks:
@@ -53,10 +56,30 @@ services:
         networks:
             - cms-network
 
+    redis:
+        image: redis:7-alpine
+        container_name: cms-redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        command: redis-server --appendonly yes
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - cms-network
+
 volumes:
     mongodb_data:
         driver: local
     mongodb_config:
+        driver: local
+    redis_data:
         driver: local
 
 networks:

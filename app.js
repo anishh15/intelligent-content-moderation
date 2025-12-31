@@ -64,7 +64,7 @@ app.get('/health', (req, res) => {
 });
 
 // Cache performance metrics
-app.get('/api/stats/cache', (req, res) => {
+app.get('/api/stats/cache', async (req, res) => {
     if (!redisCache.isConnected) {
         return res.json({
             status: 'disabled',
@@ -73,16 +73,14 @@ app.get('/api/stats/cache', (req, res) => {
     }
 
     try {
-        const stats = redisCache.getStats();
+        const stats = await redisCache.getStats();
         res.json({
             status: 'active',
-            type: 'node-cache',
+            type: 'redis',
             stats: {
                 keys: stats.keys,
                 hits: stats.hits,
-                misses: stats.misses,
-                ksize: stats.ksize,
-                vsize: stats.vsize
+                misses: stats.misses
             }
         });
     } catch (error) {

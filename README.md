@@ -34,7 +34,7 @@ This system provides automated content moderation capabilities for platforms req
 
 * Node.js 20+ with Express.js 5
 * MongoDB with Mongoose ODM
-* node-cache for in-memory caching
+* Redis for distributed caching (via ioredis)
 * Hugging Face Transformers.js for AI inference
 * Sharp for image processing
 
@@ -293,7 +293,7 @@ The system follows a three-tier architecture:
 
 1. **Presentation Layer**: React-based admin dashboard
 2. **Application Layer**: Express.js API with middleware pipeline
-3. **Data Layer**: MongoDB for persistence, node-cache for performance
+3. **Data Layer**: MongoDB for persistence, Redis for caching
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -304,7 +304,7 @@ The system follows a three-tier architecture:
                     ┌────────────┴────────────┐
                     ▼                         ▼
             ┌───────────────┐         ┌───────────────┐
-            │   MongoDB     │         │  node-cache   │
+            │   MongoDB     │         │     Redis     │
             └───────────────┘         └───────────────┘
 ```
 
