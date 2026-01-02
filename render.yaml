@@ -32,7 +32,6 @@ services:
   # Frontend (Static Site - better for React on free tier)
   - type: web
     name: cms-frontend
-    region: oregon
     plan: free
     runtime: static
     buildCommand: cd client && npm install && npm run build
