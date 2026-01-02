@@ -1,0 +1,53 @@
+services:
+  # Redis Cache
+  - type: redis
+    name: cms-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  # Backend API
+  - type: web
+    name: cms-backend
+    region: oregon
+    plan: free
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false  # Set manually in Render dashboard with your Atlas connection string
+      - key: REDIS_URL
+        fromService:
+          name: cms-redis
+          type: redis
+          property: connectionString
+
+  # Frontend (Static Site - better for React on free tier)
+  - type: web
+    name: cms-frontend
+    region: oregon
+    plan: free
+    runtime: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/build
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://cms-backend.onrender.com/api/*
+      - type: rewrite
+        source: /health
+        destination: https://cms-backend.onrender.com/health
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://cms-backend.onrender.com

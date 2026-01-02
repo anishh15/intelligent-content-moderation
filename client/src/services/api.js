@@ -1,22 +1,23 @@
 import axios from 'axios';
 
-// API configuration constants
-const API_BASE_URL = '/api';
+// In production (Render), use full backend URL; locally, use relative path with proxy
+const API_BASE_URL = process.env.REACT_APP_API_URL
+    ? `${process.env.REACT_APP_API_URL}/api`
+    : '/api';
 const DEFAULT_ACTIVITY_DAYS = 7;
 
-// Create axios instance with base configuration
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 30000 // 30 second timeout
+    timeout: 30000
 });
 
-// Request interceptor for debugging and auth (if needed later)
+// Request interceptor for logging
 api.interceptors.request.use(
     (config) => {
-        console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
+        console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
     },
     (error) => {
@@ -25,50 +26,38 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor for centralized error handling
+// Response interceptor for error handling
 api.interceptors.response.use(
-    (response) => {
-        return response;
-    },
+    (response) => response,
     (error) => {
         if (error.response) {
-            // Server responded with error status
-            console.error('API Error:', error.response.status, error.response.data);
+            console.error('Server error:', error.response.status, error.response.data);
         } else if (error.request) {
-            // Request made but no response received
-            console.error('Network Error: No response from server');
+            console.error('Network error: No response received');
         } else {
-            // Error in request setup
-            console.error('Request Error:', error.message);
+            console.error('Request error:', error.message);
         }
         return Promise.reject(error);
     }
 );
 
-// Admin panel API endpoints
 export const adminAPI = {
-    // Fetch moderation results with optional filters
-    getResults: (params = {}) => 
+    getResults: (params = {}) =>
         api.get('/admin/results', { params }),
-    
-    // Fetch single result by ID
-    getResult: (id) => 
+
+    getResult: (id) =>
         api.get(`/admin/results/${id}`),
-    
-    // Submit human review for a result
-    reviewResult: (id, data) => 
+
+    reviewResult: (id, data) =>
         api.post(`/admin/review/${id}`, data),
-    
-    // Review multiple results at once
-    bulkReview: (data) => 
+
+    bulkReview: (data) =>
         api.post('/admin/review/bulk', data),
-    
-    // Get statistics overview with optional date range
-    getStats: (params = {}) => 
+
+    getStats: (params = {}) =>
         api.get('/admin/stats/overview', { params }),
-    
-    // Get activity data for the past N days
-    getActivity: (days = DEFAULT_ACTIVITY_DAYS) => 
+
+    getActivity: (days = DEFAULT_ACTIVITY_DAYS) =>
         api.get('/admin/stats/activity', { params: { days } })
 };
 
