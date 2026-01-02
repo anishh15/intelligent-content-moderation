@@ -29,9 +29,9 @@ services:
           type: redis
           property: connectionString
 
-  # Frontend (Static Site)
-  - type: static_site
-    name: cms-frontend
+# Static Sites are defined separately
+staticSites:
+  - name: cms-frontend
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: ./client/build
     routes:
