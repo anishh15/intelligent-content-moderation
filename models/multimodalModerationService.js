@@ -46,8 +46,8 @@ class MultimodalModerationService {
             console.log('📊 Text result:', textResult.decision, `(${textResult.confidence})`);
             console.log('📊 Image result:', imageResult.decision, `(${imageResult.confidence})`);
 
-            // Fusion logic: Detect evasion patterns
-            const fusedResult = this._fuseResults(textResult, imageResult, text, imageBuffer);
+            // Fusion logic
+            const fusedResult = this._fuseResults(textResult, imageResult, text);
 
             return fusedResult;
         } catch (error) {
@@ -56,12 +56,12 @@ class MultimodalModerationService {
         }
     }
 
-    _fuseResults(textResult, imageResult, text, imageBuffer) {
+    _fuseResults(textResult, imageResult, text) {
         const reasons = [];
         let finalDecision = 'approved';
         let riskScore = 0;
 
-        // 1. Both are flagged - High risk
+        // Both are flagged - High risk
         if (textResult.decision === 'rejected' && imageResult.decision === 'rejected') {
             finalDecision = 'rejected';
             riskScore = 1.0;
@@ -69,7 +69,7 @@ class MultimodalModerationService {
             reasons.push(...textResult.reasons);
             reasons.push(...imageResult.reasons);
         }
-        // 2. Text is toxic but image is clean - Possible text-based violation
+        // Text is toxic but image is clean
         else if (textResult.decision === 'rejected' && imageResult.decision === 'approved') {
             finalDecision = 'rejected';
             riskScore = 0.8;
@@ -77,7 +77,7 @@ class MultimodalModerationService {
             reasons.push(...textResult.reasons);
             reasons.push('Image appears safe but text violates policy');
         }
-        // 3. Image is NSFW but text is clean - Image-based violation
+        // Image is NSFW but text is clean
         else if (textResult.decision === 'approved' && imageResult.decision === 'rejected') {
             finalDecision = 'rejected';
             riskScore = 0.9;
@@ -85,7 +85,19 @@ class MultimodalModerationService {
             reasons.push(...imageResult.reasons);
             reasons.push('Text appears safe but image violates policy');
         }
-        // 4. Both approved but check for evasion patterns
+        // Either flagged for review
+        else if (textResult.decision === 'flagged_for_review' || imageResult.decision === 'flagged_for_review') {
+            finalDecision = 'flagged_for_review';
+            riskScore = 0.5;
+            reasons.push('Content flagged for manual review');
+            if (textResult.decision === 'flagged_for_review') {
+                reasons.push(...textResult.reasons);
+            }
+            if (imageResult.decision === 'flagged_for_review') {
+                reasons.push(...imageResult.reasons);
+            }
+        }
+        // Both approved
         else {
             const evasionDetected = this._detectEvasion(textResult, imageResult, text);
             if (evasionDetected.isEvasion) {
@@ -119,6 +131,7 @@ class MultimodalModerationService {
                 textModel: textResult.details.model,
                 imageModel: imageResult.details.model,
                 fusionStrategy: 'cross-modal-correlation',
+                runtime: 'cloud',
                 timestamp: new Date().toISOString()
             }
         };
@@ -131,31 +144,31 @@ class MultimodalModerationService {
             reasons: []
         };
 
-        // Pattern 1: Borderline scores on both (possible coordinated evasion)
         const textScore = parseFloat(textResult.confidence);
         const imageScore = parseFloat(imageResult.confidence);
 
+        // Borderline scores on both
         if (textScore < 0.7 && textScore > 0.4 && imageScore < 0.7 && imageScore > 0.4) {
             evasionPatterns.isEvasion = true;
             evasionPatterns.score = 0.6;
-            evasionPatterns.reasons.push('Borderline scores detected on both modalities - possible evasion attempt');
+            evasionPatterns.reasons.push('Borderline scores detected on both modalities');
         }
 
-        // Pattern 2: Text references visual content (e.g., "see image", "check pic")
+        // Text references visual content
         const visualReferences = ['see image', 'check pic', 'look at this', 'click here', 'watch this'];
         const hasVisualReference = visualReferences.some(ref => text.toLowerCase().includes(ref));
 
-        if (hasVisualReference && imageResult.confidence < 0.6) {
+        if (hasVisualReference && imageScore < 0.6) {
             evasionPatterns.isEvasion = true;
             evasionPatterns.score = Math.max(evasionPatterns.score, 0.65);
-            evasionPatterns.reasons.push('Text references image with borderline image classification');
+            evasionPatterns.reasons.push('Text references image with borderline classification');
         }
 
-        // Pattern 3: Very short text with borderline image
+        // Very short text with borderline image
         if (text.length < 20 && imageScore > 0.4 && imageScore < 0.7) {
             evasionPatterns.isEvasion = true;
             evasionPatterns.score = Math.max(evasionPatterns.score, 0.55);
-            evasionPatterns.reasons.push('Minimal text with borderline image content - flagged for manual review');
+            evasionPatterns.reasons.push('Minimal text with borderline image content');
         }
 
         return evasionPatterns;

@@ -1,47 +1,24 @@
-import { pipeline } from '@huggingface/transformers';
-import sharp from 'sharp';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import axios from 'axios';
 
-// For ES modules __dirname equivalent
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const HF_API_URL = 'https://api-inference.huggingface.co/models/';
+const IMAGE_MODEL = 'Falconsai/nsfw_image_detection';
 
 class ImageModerationService {
     constructor() {
-        this.classifier = null;
         this.isInitialized = false;
-        this.tempDir = path.join(__dirname, '../temp');
-
-        // Create temp directory if it doesn't exist
-        if (!fs.existsSync(this.tempDir)) {
-            fs.mkdirSync(this.tempDir, { recursive: true });
-        }
+        this.apiToken = null;
     }
 
     async initialize() {
-        if (this.isInitialized) {
-            console.log('✅ Image moderation model already loaded');
-            return;
+        // Get HuggingFace API token from environment
+        this.apiToken = process.env.HF_TOKEN;
+
+        if (!this.apiToken) {
+            console.warn('⚠️  HF_TOKEN not set - image moderation will use fallback');
         }
 
-        try {
-            console.log('🔄 Loading NSFW detection model (this may take 1-2 minutes on first run)...');
-
-            // Load NSFW detection model
-            this.classifier = await pipeline(
-                'image-classification',
-                'AdamCodd/vit-base-nsfw-detector',
-                { quantized: true }
-            );
-
-            this.isInitialized = true;
-            console.log('✅ NSFW detection model loaded successfully');
-        } catch (error) {
-            console.error('❌ Error loading NSFW detection model:', error);
-            throw error;
-        }
+        this.isInitialized = true;
+        console.log('✅ Image moderation service initialized (HuggingFace Inference API)');
     }
 
     async moderateImage(imageBuffer) {
@@ -49,39 +26,59 @@ class ImageModerationService {
             await this.initialize();
         }
 
-        // Create a temporary file path
-        const tempFileName = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-        const tempFilePath = path.join(this.tempDir, tempFileName);
+        // Fallback if no API token
+        if (!this.apiToken) {
+            return this._fallbackModeration(imageBuffer);
+        }
 
         try {
-            // Resize image to model's expected size
-            await sharp(imageBuffer)
-                .resize(384, 384, { fit: 'cover' })
-                .png()
-                .toFile(tempFilePath);
+            // Send image buffer directly to HuggingFace
+            const response = await axios.post(
+                `${HF_API_URL}${IMAGE_MODEL}`,
+                imageBuffer,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.apiToken}`,
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    timeout: 60000,
+                    maxContentLength: 20 * 1024 * 1024,
+                    maxBodyLength: 20 * 1024 * 1024
+                }
+            );
 
-            console.log(`📁 Analyzing image: ${tempFilePath}`);
+            // Parse response - format: [{label: "nsfw", score: 0.95}, {label: "normal", score: 0.05}]
+            const results = response.data;
 
-            // Pass the file path to the NSFW classifier
-            const results = await this.classifier(tempFilePath, { topk: 2 });
+            let nsfwResult = null;
+            let sfwResult = null;
 
-            // Delete the temp file after processing
-            fs.unlinkSync(tempFilePath);
-            console.log(`✅ Analysis complete, temp file cleaned up`);
+            for (const result of results) {
+                const label = result.label.toLowerCase();
+                if (label === 'nsfw' || label === 'porn' || label === 'sexy' || label === 'hentai') {
+                    nsfwResult = result;
+                } else if (label === 'normal' || label === 'safe' || label === 'sfw' || label === 'neutral' || label === 'drawings') {
+                    sfwResult = result;
+                }
+            }
 
-            // Extract results
-            const nsfwResult = results.find(r => r.label.toLowerCase() === 'nsfw');
-            const sfwResult = results.find(r => r.label.toLowerCase() === 'sfw');
+            // If no clear NSFW result, check if highest score is a problematic category
+            if (!nsfwResult) {
+                const sortedResults = [...results].sort((a, b) => b.score - a.score);
+                const topResult = sortedResults[0];
+                const problematicLabels = ['nsfw', 'porn', 'sexy', 'hentai'];
+                if (problematicLabels.includes(topResult.label.toLowerCase())) {
+                    nsfwResult = topResult;
+                }
+            }
 
             const isNSFW = nsfwResult && nsfwResult.score > 0.5;
-            const confidence = isNSFW ? nsfwResult.score : sfwResult.score;
+            const confidence = isNSFW ? nsfwResult.score : (sfwResult ? sfwResult.score : results[0]?.score || 0);
             const decision = isNSFW ? 'rejected' : 'approved';
 
             let reasons = [];
-            if (isNSFW) {
+            if (isNSFW && nsfwResult) {
                 reasons.push(`NSFW content detected with ${(nsfwResult.score * 100).toFixed(1)}% confidence`);
-
-                // Additional context based on confidence level
                 if (nsfwResult.score > 0.9) {
                     reasons.push('High confidence detection - explicit content');
                 } else if (nsfwResult.score > 0.7) {
@@ -101,20 +98,54 @@ class ImageModerationService {
                 })),
                 reasons,
                 details: {
-                    model: 'AdamCodd/vit-base-nsfw-detector',
+                    model: IMAGE_MODEL,
                     imageSize: `${imageBuffer.length} bytes`,
                     threshold: 0.5,
-                    description: 'ViT-based NSFW detector (96.54% accuracy)'
+                    description: 'NSFW image classifier (HuggingFace Inference API)',
+                    runtime: 'cloud'
                 }
             };
         } catch (error) {
-            // Clean up temp file if it exists
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
+            console.error('HuggingFace Image API error:', error.message);
+
+            // If model is loading, return a retry indicator
+            if (error.response?.status === 503) {
+                return {
+                    decision: 'flagged_for_review',
+                    confidence: '0.0000',
+                    isNSFW: false,
+                    predictions: [],
+                    reasons: ['AI model is loading, please retry in a moment'],
+                    details: {
+                        model: IMAGE_MODEL,
+                        error: 'Model loading',
+                        runtime: 'cloud'
+                    }
+                };
             }
-            console.error('Error in image moderation:', error);
-            throw error;
+
+            // Fallback for other errors
+            return this._fallbackModeration(imageBuffer);
         }
+    }
+
+    // Fallback when API is unavailable - flags all images for manual review
+    _fallbackModeration(imageBuffer) {
+        return {
+            decision: 'flagged_for_review',
+            confidence: '0.5000',
+            isNSFW: false,
+            predictions: [
+                { label: 'unknown', score: '50.00%' }
+            ],
+            reasons: ['Image moderation API unavailable - flagged for manual review'],
+            details: {
+                model: 'fallback-manual-review',
+                imageSize: `${imageBuffer.length} bytes`,
+                description: 'Manual review required (API unavailable)',
+                runtime: 'local'
+            }
+        };
     }
 }
 
