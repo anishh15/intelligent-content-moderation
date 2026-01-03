@@ -131,6 +131,8 @@ app.post('/api/moderate/text', moderationLimiter, cacheMiddleware({ ttl: 3600 })
             reasons: result.reasons,
             details: result.details || {},
             riskScore: parseFloat(result.confidence),
+            // Auto-approve high-confidence safe content, others need review
+            reviewStatus: result.decision === 'approved' && parseFloat(result.confidence) < 0.3 ? 'reviewed' : 'pending',
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
@@ -176,14 +178,16 @@ app.post('/api/moderate/image', moderationLimiter, upload.single('image'), async
                     size: req.file.size,
                     mimeType: req.file.mimetype
                 },
-                // Store small images as base64 for preview (limit to ~100KB)
-                imageThumbnail: req.file.size < 100000
+                // Store images up to 500KB as base64 for preview
+                imageThumbnail: req.file.size < 500000
                     ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
                     : null
             },
             reasons: result.reasons,
             details: result.details || {},
             riskScore: parseFloat(result.confidence),
+            // Auto-approve high-confidence safe content, others need review
+            reviewStatus: result.decision === 'approved' && parseFloat(result.confidence) > 0.9 ? 'reviewed' : 'pending',
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
@@ -245,8 +249,8 @@ app.post('/api/moderate/multimodal', moderationLimiter, upload.single('image'), 
                     size: req.file.size,
                     mimeType: req.file.mimetype
                 },
-                // Store small images as base64 for preview (limit to ~100KB)
-                imageThumbnail: req.file.size < 100000
+                // Store images up to 500KB as base64 for preview
+                imageThumbnail: req.file.size < 500000
                     ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
                     : null
             },
@@ -254,6 +258,8 @@ app.post('/api/moderate/multimodal', moderationLimiter, upload.single('image'), 
             reasons: result.reasons,
             details: result.details,
             riskScore: parseFloat(result.riskScore),
+            // Auto-approve high-confidence safe content, others need review
+            reviewStatus: result.decision === 'approved' && parseFloat(result.riskScore) < 0.3 ? 'reviewed' : 'pending',
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
