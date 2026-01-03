@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const HF_API_URL = 'https://api-inference.huggingface.co/models/';
-const TEXT_MODEL = 'unitary/toxic-bert';
+const TEXT_MODEL = 's-nlp/roberta_toxicity_classifier';
 
 class TextModerationService {
     constructor() {
@@ -45,16 +45,17 @@ class TextModerationService {
             );
 
             // Parse HuggingFace response
-            // Response format: [[{label: "toxic", score: 0.95}, {label: "non-toxic", score: 0.05}]]
+            // Response format: [[{label: "toxic", score: 0.95}, {label: "neutral", score: 0.05}]]
             const results = response.data[0] || response.data;
 
             let toxicResult = null;
             let nonToxicResult = null;
 
             for (const result of results) {
-                if (result.label === 'toxic') {
+                const label = result.label.toLowerCase();
+                if (label === 'toxic' || label === 'toxicity') {
                     toxicResult = result;
-                } else if (result.label === 'non-toxic') {
+                } else if (label === 'non-toxic' || label === 'neutral' || label === 'non_toxic') {
                     nonToxicResult = result;
                 }
             }
