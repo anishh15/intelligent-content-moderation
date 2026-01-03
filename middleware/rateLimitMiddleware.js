@@ -18,7 +18,9 @@ function createLimiter(options) {
         validate: {
             xForwardedForHeader: false,
             trustProxy: false, // Disable trust proxy validation for Render
-        }
+        },
+        // Skip rate limiting for health checks (Render polls every 5 seconds)
+        skip: (req) => req.path === '/health'
     };
 
     // Use Redis store if connected (for distributed rate limiting)
