@@ -564,6 +564,36 @@ body {
     flex-shrink: 0;
 }
 
+/* Image Thumbnail Preview */
+.content-image {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-app);
+}
+
+.image-thumbnail {
+    max-width: 100%;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.content-image .file-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Risk Meter */
 .risk-meter {
     margin-bottom: 1.25rem;

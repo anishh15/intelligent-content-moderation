@@ -21,7 +21,8 @@ const moderationResultSchema = new mongoose.Schema({
             filename: String,
             size: Number,
             mimeType: String
-        }
+        },
+        imageThumbnail: String // Base64 encoded thumbnail for preview
     },
     modalities: {
         text: mongoose.Schema.Types.Mixed,

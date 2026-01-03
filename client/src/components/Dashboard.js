@@ -301,14 +301,27 @@ function Dashboard({ user, token, onLogout }) {
                                                 </div>
 
                                                 <div className="card-content">
-                                                    {result.content?.text ? (
+                                                    {/* Text content */}
+                                                    {result.content?.text && (
                                                         <p className="content-text">
                                                             {result.content.text.length > 150
                                                                 ? `"${result.content.text.substring(0, 150)}..."`
                                                                 : `"${result.content.text}"`
                                                             }
                                                         </p>
-                                                    ) : result.content?.imageMetadata ? (
+                                                    )}
+
+                                                    {/* Image thumbnail preview */}
+                                                    {result.content?.imageThumbnail ? (
+                                                        <div className="content-image">
+                                                            <img
+                                                                src={result.content.imageThumbnail}
+                                                                alt="Content preview"
+                                                                className="image-thumbnail"
+                                                            />
+                                                            <span className="file-name">{result.content.imageMetadata?.filename}</span>
+                                                        </div>
+                                                    ) : result.content?.imageMetadata && !result.content?.text ? (
                                                         <div className="content-file">
                                                             <span className="file-icon"><ImageIcon /></span>
                                                             <span className="file-name">{result.content.imageMetadata.filename}</span>
@@ -316,11 +329,11 @@ function Dashboard({ user, token, onLogout }) {
                                                                 ({(result.content.imageMetadata.size / 1024).toFixed(1)} KB)
                                                             </span>
                                                         </div>
-                                                    ) : (
+                                                    ) : !result.content?.text && !result.content?.imageMetadata ? (
                                                         <p className="content-text" style={{ fontStyle: 'italic', color: '#999' }}>
                                                             No content data available
                                                         </p>
-                                                    )}
+                                                    ) : null}
                                                 </div>
 
                                                 <div className="risk-meter">

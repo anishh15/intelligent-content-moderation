@@ -175,7 +175,11 @@ app.post('/api/moderate/image', moderationLimiter, upload.single('image'), async
                     filename: req.file.originalname,
                     size: req.file.size,
                     mimeType: req.file.mimetype
-                }
+                },
+                // Store small images as base64 for preview (limit to ~100KB)
+                imageThumbnail: req.file.size < 100000
+                    ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+                    : null
             },
             reasons: result.reasons,
             details: result.details || {},
@@ -240,7 +244,11 @@ app.post('/api/moderate/multimodal', moderationLimiter, upload.single('image'), 
                     filename: req.file.originalname,
                     size: req.file.size,
                     mimeType: req.file.mimetype
-                }
+                },
+                // Store small images as base64 for preview (limit to ~100KB)
+                imageThumbnail: req.file.size < 100000
+                    ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+                    : null
             },
             modalities: result.modalities,
             reasons: result.reasons,
