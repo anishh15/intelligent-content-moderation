@@ -1,8 +1,12 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import ModerationResult from '../models/ModerationResult.js';
+import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// All admin routes require authentication
+router.use(authenticateToken);
 
 // Pagination and query defaults
 const DEFAULT_LIMIT = 50;
@@ -86,7 +90,7 @@ router.get('/results/:id', async (req, res) => {
         }
 
         const result = await ModerationResult.findById(req.params.id);
-        
+
         if (!result) {
             return res.status(404).json({ error: 'Result not found' });
         }
@@ -108,14 +112,14 @@ router.post('/review/:id', async (req, res) => {
         const { decision, reviewedBy, reviewNotes } = req.body;
 
         if (!VALID_DECISIONS.includes(decision)) {
-            return res.status(400).json({ 
-                error: 'Invalid decision. Must be: approved, rejected, or flagged_for_review' 
+            return res.status(400).json({
+                error: 'Invalid decision. Must be: approved, rejected, or flagged_for_review'
             });
         }
 
         if (!reviewedBy || reviewedBy.trim().length === 0) {
-            return res.status(400).json({ 
-                error: 'reviewedBy is required' 
+            return res.status(400).json({
+                error: 'reviewedBy is required'
             });
         }
 
@@ -152,7 +156,7 @@ router.post('/review/:id', async (req, res) => {
 router.get('/stats/overview', async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        
+
         // Build date range filter
         const dateFilter = {};
         if (startDate || endDate) {
@@ -230,7 +234,7 @@ router.get('/stats/activity', async (req, res) => {
     try {
         const { days } = req.query;
         const safeDays = parseIntSafe(days, DEFAULT_ACTIVITY_DAYS, 1, 365);
-        
+
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - safeDays);
 
@@ -292,14 +296,14 @@ router.post('/review/bulk', async (req, res) => {
         }
 
         if (!VALID_DECISIONS.includes(decision)) {
-            return res.status(400).json({ 
-                error: 'Invalid decision. Must be: approved, rejected, or flagged_for_review' 
+            return res.status(400).json({
+                error: 'Invalid decision. Must be: approved, rejected, or flagged_for_review'
             });
         }
 
         if (!reviewedBy || reviewedBy.trim().length === 0) {
-            return res.status(400).json({ 
-                error: 'reviewedBy is required' 
+            return res.status(400).json({
+                error: 'reviewedBy is required'
             });
         }
 

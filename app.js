@@ -11,7 +11,9 @@ import database from './config/database.js';
 import ModerationResult from './models/ModerationResult.js';
 import redisCache from './config/redis.js';
 import { cacheMiddleware } from './middleware/cacheMiddleware.js';
+import { generalLimiter, moderationLimiter, authLimiter } from './middleware/rateLimitMiddleware.js';
 import adminRoutes from './routes/adminRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
@@ -27,22 +29,32 @@ app.use(morgan('combined')); // HTTP request logger
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
+
 // Root endpoint - API documentation
 app.get('/', (req, res) => {
     res.json({
         message: 'Content Moderation System API',
-        version: '1.0.0',
+        version: '2.0.0',
         status: 'running',
         endpoints: {
             health: 'GET /health',
-            textModeration: 'POST /api/moderate/text',
-            imageModeration: 'POST /api/moderate/image',
-            multimodalModeration: 'POST /api/moderate/multimodal',
+            auth: {
+                register: 'POST /api/auth/register',
+                login: 'POST /api/auth/login',
+                profile: 'GET /api/auth/me'
+            },
+            moderation: {
+                text: 'POST /api/moderate/text',
+                image: 'POST /api/moderate/image',
+                multimodal: 'POST /api/moderate/multimodal'
+            },
             admin: {
-                results: 'GET /api/admin/results',
-                review: 'POST /api/admin/review/:id',
-                stats: 'GET /api/admin/stats/overview',
-                activity: 'GET /api/admin/stats/activity'
+                results: 'GET /api/admin/results (auth required)',
+                review: 'POST /api/admin/review/:id (auth required)',
+                stats: 'GET /api/admin/stats/overview (auth required)',
+                activity: 'GET /api/admin/stats/activity (auth required)'
             }
         }
     });
@@ -89,8 +101,8 @@ app.get('/api/stats/cache', async (req, res) => {
     }
 });
 
-// Moderate text content
-app.post('/api/moderate/text', cacheMiddleware({ ttl: 3600 }), async (req, res) => {
+// Moderate text content (rate limited)
+app.post('/api/moderate/text', moderationLimiter, cacheMiddleware({ ttl: 3600 }), async (req, res) => {
     try {
         const { text } = req.body;
 
@@ -140,8 +152,8 @@ app.post('/api/moderate/text', cacheMiddleware({ ttl: 3600 }), async (req, res) 
     }
 });
 
-// Moderate image content
-app.post('/api/moderate/image', upload.single('image'), async (req, res) => {
+// Moderate image content (rate limited)
+app.post('/api/moderate/image', moderationLimiter, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -196,8 +208,8 @@ app.post('/api/moderate/image', upload.single('image'), async (req, res) => {
     }
 });
 
-// Moderate text + image together
-app.post('/api/moderate/multimodal', upload.single('image'), async (req, res) => {
+// Moderate text + image together (rate limited)
+app.post('/api/moderate/multimodal', moderationLimiter, upload.single('image'), async (req, res) => {
     try {
         const { text } = req.body;
 
@@ -263,6 +275,10 @@ app.post('/api/moderate/multimodal', upload.single('image'), async (req, res) =>
     }
 });
 
+// Auth routes (with strict rate limiting for brute force protection)
+app.use('/api/auth', authLimiter, authRoutes);
+
+// Admin routes (authentication required - handled by adminRoutes middleware)
 app.use('/api/admin', adminRoutes);
 
 // Handle undefined routes

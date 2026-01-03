@@ -24,7 +24,10 @@ This system provides automated content moderation capabilities for platforms req
 ### Infrastructure
 
 * MongoDB persistence layer with indexed queries
-* In-memory caching for improved response times
+* Redis caching for distributed rate limiting
+* JWT authentication for admin routes
+* Rate limiting to prevent abuse
+* Multi-provider AI fallback (HuggingFace → OpenAI → local)
 * RESTful API design with comprehensive endpoint coverage
 * Docker containerized architecture
 
@@ -109,7 +112,10 @@ Create a `.env` file in the project root:
 PORT=3000
 NODE_ENV=development
 MONGODB_URI=your_mongodb_connection_string
-MONGODB_DB_NAME=cms_db
+JWT_SECRET=your-secret-key-min-32-chars
+HF_TOKEN=your_huggingface_token
+OPENAI_API_KEY=your_openai_key  # Optional, for fallback
+REDIS_URL=redis://localhost:6379  # Optional
 ```
 
 Replace `your_mongodb_connection_string` with your MongoDB Atlas or local instance connection string.
@@ -150,6 +156,42 @@ npm run docker:restart
 ```
 
 ## API Reference
+
+### Authentication Endpoints
+
+**Register User**
+
+```
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "name": "Admin User"
+}
+```
+
+**Login**
+
+```
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+
+Response: { "token": "jwt-token", "user": {...} }
+```
+
+**Get Current User**
+
+```
+GET /api/auth/me
+Authorization: Bearer <token>
+```
 
 ### Moderation Endpoints
 
