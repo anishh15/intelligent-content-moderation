@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import './Login.css';
 
 function Login({ onLogin }) {
-    const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -16,16 +14,11 @@ function Login({ onLogin }) {
         setError('');
         setLoading(true);
 
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-        const body = isLogin
-            ? { email, password }
-            : { email, password, name };
-
         try {
-            const response = await fetch(`${API_URL}${endpoint}`, {
+            const response = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ email, password })
             });
 
             const data = await response.json();
@@ -54,35 +47,7 @@ function Login({ onLogin }) {
                     <p>Content Moderation System</p>
                 </div>
 
-                <div className="login-tabs">
-                    <button
-                        className={`tab ${isLogin ? 'active' : ''}`}
-                        onClick={() => setIsLogin(true)}
-                    >
-                        Login
-                    </button>
-                    <button
-                        className={`tab ${!isLogin ? 'active' : ''}`}
-                        onClick={() => setIsLogin(false)}
-                    >
-                        Register
-                    </button>
-                </div>
-
                 <form onSubmit={handleSubmit} className="login-form">
-                    {!isLogin && (
-                        <div className="form-group">
-                            <label>Name</label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Your name"
-                                required={!isLogin}
-                            />
-                        </div>
-                    )}
-
                     <div className="form-group">
                         <label>Email</label>
                         <input
@@ -109,12 +74,12 @@ function Login({ onLogin }) {
                     {error && <div className="error-message">{error}</div>}
 
                     <button type="submit" className="submit-btn" disabled={loading}>
-                        {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+                        {loading ? 'Please wait...' : 'Sign In'}
                     </button>
                 </form>
 
                 <div className="login-footer">
-                    <p>Secure authentication with JWT</p>
+                    <p>Contact admin for account access</p>
                 </div>
             </div>
         </div>

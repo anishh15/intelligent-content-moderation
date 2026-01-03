@@ -1,13 +1,14 @@
 import express from 'express';
 import User from '../models/User.js';
-import { generateToken, authenticateToken } from '../middleware/authMiddleware.js';
+import { generateToken, authenticateToken, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Register new user
-router.post('/register', async (req, res) => {
+// Register new user - ADMIN ONLY
+// Admins can create new users with any role
+router.post('/register', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, name, role } = req.body;
 
         // Validation
         if (!email || !password || !name) {
@@ -23,6 +24,10 @@ router.post('/register', async (req, res) => {
             });
         }
 
+        // Validate role if provided
+        const validRoles = ['admin', 'moderator', 'viewer'];
+        const userRole = validRoles.includes(role) ? role : 'moderator';
+
         // Check if user exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
@@ -34,20 +39,16 @@ router.post('/register', async (req, res) => {
             email,
             password,
             name,
-            role: 'moderator' // Default role, first user can be promoted manually
+            role: userRole
         });
 
         await user.save();
 
-        // Generate token
-        const token = generateToken(user._id);
-
-        console.log(`New user registered: ${email}`);
+        console.log(`New user registered by admin ${req.user.email}: ${email} (${userRole})`);
 
         res.status(201).json({
-            message: 'Registration successful',
-            user: user.toJSON(),
-            token
+            message: 'User created successfully',
+            user: user.toJSON()
         });
     } catch (error) {
         console.error('Registration error:', error);
