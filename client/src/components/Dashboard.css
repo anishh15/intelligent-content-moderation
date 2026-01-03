@@ -157,6 +157,35 @@ body {
     animation: spin 1s linear infinite;
 }
 
+.user-info {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 6px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
 /* Main Content Area */
 .main-content {
     max-width: 1400px;

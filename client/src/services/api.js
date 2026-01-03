@@ -14,9 +14,13 @@ const api = axios.create({
     timeout: 30000
 });
 
-// Request interceptor for logging
+// Request interceptor - add auth token to all requests
 api.interceptors.request.use(
     (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
     },
@@ -32,6 +36,14 @@ api.interceptors.response.use(
     (error) => {
         if (error.response) {
             console.error('Server error:', error.response.status, error.response.data);
+
+            // If 401, token might be expired - clear auth
+            if (error.response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // Optionally reload to show login
+                // window.location.reload();
+            }
         } else if (error.request) {
             console.error('Network error: No response received');
         } else {

@@ -6,8 +6,6 @@ import {
 import { Shield, Refresh, List, Clock, Check, X, Alert, ImageIcon } from './Icons';
 import './Dashboard.css';
 
-const ADMIN_EMAIL = 'anshladdha15@gmail.com';
-
 const FILTER_OPTIONS = [
     { value: 'all', label: 'All' },
     { value: 'rejected', label: 'Rejected' },
@@ -15,7 +13,8 @@ const FILTER_OPTIONS = [
     { value: 'flagged_for_review', label: 'Flagged' }
 ];
 
-function Dashboard() {
+function Dashboard({ user, token, onLogout }) {
+    const adminEmail = user?.email || 'admin@cms.local';
     const [stats, setStats] = useState(null);
     const [activity, setActivity] = useState([]);
     const [results, setResults] = useState([]);
@@ -80,7 +79,7 @@ function Dashboard() {
         try {
             await adminAPI.reviewResult(pendingReview.id, {
                 decision: pendingReview.decision,
-                reviewedBy: ADMIN_EMAIL,
+                reviewedBy: adminEmail,
                 reviewNotes: `Manually reviewed as ${pendingReview.decision}`
             });
 
@@ -146,6 +145,11 @@ function Dashboard() {
                     <span>CMS</span>
                 </div>
                 <div className="nav-actions">
+                    {user && (
+                        <span className="user-info" title={user.email}>
+                            {user.name}
+                        </span>
+                    )}
                     <span className="status-indicator">Live</span>
                     <button
                         onClick={loadData}
@@ -154,6 +158,11 @@ function Dashboard() {
                     >
                         <Refresh className="icon-refresh" />
                     </button>
+                    {onLogout && (
+                        <button onClick={onLogout} className="logout-btn">
+                            Logout
+                        </button>
+                    )}
                 </div>
             </nav>
 
