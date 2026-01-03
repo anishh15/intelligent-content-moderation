@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models/';
+const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/';
 const TEXT_MODEL = 's-nlp/roberta_toxicity_classifier';
 
 class TextModerationService {

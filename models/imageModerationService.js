@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models/';
+const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/';
 const IMAGE_MODEL = 'Falconsai/nsfw_image_detection';
 
 class ImageModerationService {
