@@ -14,10 +14,10 @@ function createLimiter(options) {
         },
         standardHeaders: true, // Return rate limit info in headers
         legacyHeaders: false,
-        // Skip the custom keyGenerator to use the default (handles IPv6 properly)
-        // Default uses req.ip which express-rate-limit handles correctly
+        // Disable validations that cause issues behind reverse proxies like Render
         validate: {
-            xForwardedForHeader: false, // Disable validation for proxy setups
+            xForwardedForHeader: false,
+            trustProxy: false, // Disable trust proxy validation for Render
         }
     };
 
