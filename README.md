@@ -159,18 +159,22 @@ npm run docker:restart
 
 ### Authentication Endpoints
 
-**Register User**
+**Register User (Admin Only)**
 
 ```
 POST /api/auth/register
+Authorization: Bearer <admin-token>
 Content-Type: application/json
 
 {
   "email": "user@example.com",
   "password": "securepassword",
-  "name": "Admin User"
+  "name": "New User",
+  "role": "moderator"  // admin, moderator, or viewer
 }
 ```
+
+> Note: Only administrators can create new users. Public registration is disabled.
 
 **Login**
 
@@ -351,6 +355,10 @@ The system follows a three-tier architecture:
 
 ## Security Considerations
 
+* JWT authentication for admin routes (24-hour expiry)
+* Bcrypt password hashing (12 rounds)
+* Rate limiting: 100 req/15min (general), 20 req/min (moderation), 5 req/15min (auth)
+* Admin-only user registration (no public sign-up)
 * Helmet.js for HTTP header security
 * CORS protection
 * Input validation and sanitization
@@ -369,7 +377,7 @@ Future enhancements:
 * Webhook system for real-time notifications
 * Custom model fine-tuning
 * Kubernetes orchestration
-* Rate limiting implementation
+* Role-based dashboard access control
 
 ## Testing
 
@@ -391,4 +399,4 @@ Repository: https://github.com/anishh15/intelligent-content-moderation
 
 ## Acknowledgments
 
-Built using Hugging Face Transformers.js and MongoDB Atlas. Inspired by modern content moderation systems used across major platforms.
+Built using HuggingFace Inference API and MongoDB Atlas. Inspired by modern content moderation systems used across major platforms.
