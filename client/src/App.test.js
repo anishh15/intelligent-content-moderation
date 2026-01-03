@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders content moderation dashboard', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  // Check for loading state which appears first
+  const loadingElement = screen.getByText(/Loading Dashboard/i);
+  expect(loadingElement).toBeInTheDocument();
 });

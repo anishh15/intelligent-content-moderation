@@ -35,13 +35,12 @@ This system provides automated content moderation capabilities for platforms req
 * Node.js 20+ with Express.js 5
 * MongoDB with Mongoose ODM
 * Redis for distributed caching (via ioredis)
-* Hugging Face Transformers.js for AI inference
-* Sharp for image processing
+* HuggingFace Inference API for AI inference (cloud-based)
 
-**AI Models**
+**AI Models (via HuggingFace Inference API)**
 
-* Text: Xenova/toxic-bert (toxicity classification)
-* Image: AdamCodd/vit-base-nsfw-detector (NSFW detection)
+* Text: s-nlp/roberta_toxicity_classifier (toxicity classification)
+* Image: Falconsai/nsfw_image_detection (NSFW detection)
 
 **Frontend**
 
@@ -282,9 +281,9 @@ intelligent-content-moderation/
 
 ## Performance Characteristics
 
-* **Initial Request Latency**: 500-1000ms (depends on hardware)
+* **Initial Request Latency**: 200-500ms (cloud API)
 * **Cached Request Latency**: 5-20ms
-* **AI Model Loading**: 1-2 minutes on first run
+* **AI Model Cold Start**: 10-30 seconds (when model is not loaded on HuggingFace servers)
 * **Typical Cache Hit Rate**: 60-80%
 
 ## Architecture
@@ -297,8 +296,8 @@ The system follows a three-tier architecture:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  React Client   │────▶│  Express API    │────▶│  AI Models      │
-│  (nginx)        │     │                 │     │  (Transformers) │
+│  React Client   │────▶│  Express API    │────▶│  HuggingFace    │
+│  (nginx)        │     │                 │     │  Inference API  │
 └─────────────────┘     └────────┬────────┘     └─────────────────┘
                                  │
                     ┌────────────┴────────────┐
