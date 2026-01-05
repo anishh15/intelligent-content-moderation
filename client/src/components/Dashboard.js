@@ -321,7 +321,8 @@ function Dashboard({ user, token, onLogout }) {
                                                             />
                                                             <span className="file-name">{result.content.imageMetadata?.filename}</span>
                                                         </div>
-                                                    ) : result.content?.imageMetadata && !result.content?.text ? (
+                                                    ) : result.content?.imageMetadata ? (
+                                                        /* Show placeholder for large images (no thumbnail) */
                                                         <div className="content-file">
                                                             <span className="file-icon"><ImageIcon /></span>
                                                             <span className="file-name">{result.content.imageMetadata.filename}</span>
@@ -329,7 +330,7 @@ function Dashboard({ user, token, onLogout }) {
                                                                 ({(result.content.imageMetadata.size / 1024).toFixed(1)} KB)
                                                             </span>
                                                         </div>
-                                                    ) : !result.content?.text && !result.content?.imageMetadata ? (
+                                                    ) : !result.content?.text ? (
                                                         <p className="content-text" style={{ fontStyle: 'italic', color: '#999' }}>
                                                             No content data available
                                                         </p>

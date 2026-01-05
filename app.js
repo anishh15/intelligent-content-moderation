@@ -168,6 +168,12 @@ app.post('/api/moderate/image', moderationLimiter, upload.single('image'), async
         const result = await imageModerationService.moderateImage(req.file.buffer);
 
         // Save moderation result to database
+        // For images: riskScore should be LOW for approved (safe), HIGH for rejected (nsfw)
+        // confidence = probability of the winning class (normal for approved, nsfw for rejected)
+        const imageRiskScore = result.decision === 'approved'
+            ? (1 - parseFloat(result.confidence))  // approved: risk = 1 - normal_probability
+            : parseFloat(result.confidence);        // rejected: risk = nsfw_probability
+
         const moderationRecord = new ModerationResult({
             type: 'image',
             decision: result.decision,
@@ -185,7 +191,7 @@ app.post('/api/moderate/image', moderationLimiter, upload.single('image'), async
             },
             reasons: result.reasons,
             details: result.details || {},
-            riskScore: parseFloat(result.confidence),
+            riskScore: imageRiskScore,
             // Auto-approve high-confidence safe content, others need review
             reviewStatus: result.decision === 'approved' && parseFloat(result.confidence) > 0.9 ? 'reviewed' : 'pending',
             ipAddress: req.ip,
