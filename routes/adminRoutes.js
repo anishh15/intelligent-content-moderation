@@ -330,4 +330,57 @@ router.post('/review/bulk', async (req, res) => {
     }
 });
 
+// ============================================
+// ADMIN MAINTENANCE ENDPOINTS (Admin Only)
+// ============================================
+
+import redisCache from '../config/redis.js';
+
+// Flush Redis cache (admin only)
+router.delete('/cache/flush', requireRole('admin'), async (req, res) => {
+    try {
+        if (!redisCache.isConnected || !redisCache.client) {
+            return res.status(503).json({ error: 'Cache not available' });
+        }
+
+        await redisCache.client.flushdb();
+        console.log('Cache flushed by admin:', req.user.email);
+
+        res.json({
+            message: 'Cache flushed successfully',
+            flushedBy: req.user.email
+        });
+    } catch (error) {
+        console.error('Error flushing cache:', error);
+        res.status(500).json({ error: 'Failed to flush cache' });
+    }
+});
+
+// Clear all moderation results (admin only - use with caution!)
+router.delete('/results/all', requireRole('admin'), async (req, res) => {
+    try {
+        const { confirm } = req.query;
+
+        if (confirm !== 'yes') {
+            return res.status(400).json({
+                error: 'Add ?confirm=yes to confirm deletion of ALL moderation results'
+            });
+        }
+
+        const count = await ModerationResult.countDocuments();
+        await ModerationResult.deleteMany({});
+
+        console.log(`All ${count} moderation results deleted by admin:`, req.user.email);
+
+        res.json({
+            message: 'All moderation results deleted',
+            deletedCount: count,
+            deletedBy: req.user.email
+        });
+    } catch (error) {
+        console.error('Error clearing results:', error);
+        res.status(500).json({ error: 'Failed to clear results' });
+    }
+});
+
 export default router;
