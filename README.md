@@ -275,6 +275,24 @@ GET /api/admin/stats/overview
 GET /api/admin/stats/activity?days=7
 ```
 
+### Admin Maintenance Endpoints (Admin Only)
+
+**Flush Cache**
+
+```
+DELETE /api/admin/cache/flush
+Authorization: Bearer <admin-token>
+```
+
+**Clear All Results**
+
+```
+DELETE /api/admin/results/all?confirm=yes
+Authorization: Bearer <admin-token>
+```
+
+> ⚠️ These operations are irreversible. Only administrators can access these endpoints.
+
 ### Utility Endpoints
 
 **Health Check**
@@ -302,15 +320,23 @@ intelligent-content-moderation/
 │   ├── database.js        # MongoDB connection
 │   └── redis.js           # In-memory cache service
 ├── middleware/
-│   ├── uploadMiddleware.js    # Image upload handling
-│   └── cacheMiddleware.js     # Response caching
+│   ├── authMiddleware.js      # JWT authentication & role checking
+│   ├── cacheMiddleware.js     # Response caching
+│   ├── rateLimitMiddleware.js # Rate limiting (Redis-backed)
+│   └── uploadMiddleware.js    # Image upload handling
 ├── models/
-│   ├── ModerationResult.js        # Database schema
+│   ├── ModerationResult.js        # Moderation result schema
+│   ├── User.js                    # User authentication schema
 │   ├── textModerationService.js   # Text AI service
 │   ├── imageModerationService.js  # Image AI service
 │   └── multimodalModerationService.js  # Cross-modal analysis
 ├── routes/
-│   └── adminRoutes.js     # Admin API endpoints
+│   ├── adminRoutes.js     # Admin API endpoints
+│   └── authRoutes.js      # Authentication endpoints
+├── scripts/
+│   ├── clearCache.js      # Redis cache flush utility
+│   ├── clearDatabase.js   # Database reset utility
+│   └── promoteToAdmin.js  # User role promotion
 └── client/
     ├── Dockerfile         # Frontend container
     ├── nginx.conf         # Nginx configuration
